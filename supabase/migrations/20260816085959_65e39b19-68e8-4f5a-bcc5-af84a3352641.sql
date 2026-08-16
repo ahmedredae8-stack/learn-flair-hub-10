@@ -1,0 +1,1 @@
+DELETE FROM public.lesson_steps WHERE created_at = '2026-08-16 08:58:55.027545+00';

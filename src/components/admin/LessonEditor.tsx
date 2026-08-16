@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { uploadFile } from "@/lib/upload";
@@ -7,8 +8,13 @@ import { AvatarBubble } from "@/components/AvatarBubble";
 import { characterImage } from "@/lib/characterImage";
 import { CodeLab, isCodeLab } from "@/components/lesson/CodeLab";
 import { isSiteView, type SiteSpec } from "@/components/lesson/SiteViewer";
+import { generateLessonSteps, type AiStep } from "@/lib/ai-lesson.functions";
 
-import { Loader2, Plus, Save, Trash2, ArrowUp, ArrowDown, Upload, X } from "lucide-react";
+import { Loader2, Plus, Save, Trash2, ArrowUp, ArrowDown, Upload, X, Sparkles } from "lucide-react";
+
+/** Placeholder picture used for AI/auto image bubbles until the admin uploads the real one. */
+const DEFAULT_IMAGE = "/brand/mascot.png";
+
 
 export const MOODS = [
   { id: "neutral", label: "عادي" },
@@ -120,10 +126,10 @@ export function LessonEditor({ lessonId, onClose }: { lessonId: string; onClose:
     } catch (e) { toast.error(e instanceof Error ? e.message : "فشل الحفظ"); } finally { setSaving(false); }
   }
 
-  async function addStep(kind: StepKind | "code" | "site") {
-    const order = (stepsQ.data?.length ?? 0) + 1;
+  /** Build the DB payload for a new step of the given kind. */
+  function buildStep(kind: StepKind | "code" | "site", order: number) {
     if (kind === "site") {
-      const { error } = await supabase.from("lesson_steps").insert({
+      return {
         lesson_id: lessonId, order_index: order, kind: "text",
         content: "افتح الموقع بالأسفل ونفّذ المطلوب ثم اضغط «تم».",
         options: {
@@ -138,14 +144,10 @@ export function LessonEditor({ lessonId, onClose }: { lessonId: string; onClose:
             height: 420,
           },
         },
-      } as never);
-      if (error) return toast.error(error.message);
-      qc.invalidateQueries({ queryKey: ["admin-steps", lessonId] });
-      return;
+      };
     }
-
     if (kind === "code") {
-      const { error } = await supabase.from("lesson_steps").insert({
+      return {
         lesson_id: lessonId, order_index: order, kind: "text", content: "",
         options: {
           code: {
@@ -162,18 +164,71 @@ export function LessonEditor({ lessonId, onClose }: { lessonId: string; onClose:
             success: "ناتج صحيح! 🎉",
           },
         },
-      } as never);
-      if (error) return toast.error(error.message);
-      qc.invalidateQueries({ queryKey: ["admin-steps", lessonId] });
-      return;
+      };
     }
-    const { error } = await supabase.from("lesson_steps").insert({
-      lesson_id: lessonId, order_index: order, kind, content: kind === "question" ? "اختر الإجابة الصحيحة" : "",
+    return {
+      lesson_id: lessonId, order_index: order, kind,
+      content: kind === "question" ? "اختر الإجابة الصحيحة" : "",
+      media_url: kind === "image" ? DEFAULT_IMAGE : null,
       options: kind === "question" ? { choices: ["الخيار 1", "الخيار 2"], answer: 0 } : null,
+    };
+  }
+
+  /** Free space for `count` new steps starting at `order` (shift the rest down). */
+  async function shiftFrom(order: number, count: number) {
+    const list = stepsQ.data ?? [];
+    const after = list.filter((s) => s.order_index >= order).sort((a, b) => b.order_index - a.order_index);
+    for (const s of after) {
+      const { error } = await supabase.from("lesson_steps").update({ order_index: s.order_index + count } as never).eq("id", s.id);
+      if (error) throw new Error(error.message);
+    }
+  }
+
+  /** Add a step at the end, or insert it right before step #atIndex. */
+  async function addStep(kind: StepKind | "code" | "site", atIndex?: number) {
+    const list = stepsQ.data ?? [];
+    try {
+      let order: number;
+      if (atIndex == null) {
+        order = (list.at(-1)?.order_index ?? 0) + 1;
+      } else {
+        order = list[atIndex]?.order_index ?? list.length + 1;
+        await shiftFrom(order, 1);
+      }
+      const { error } = await supabase.from("lesson_steps").insert(buildStep(kind, order) as never);
+      if (error) throw new Error(error.message);
+      qc.invalidateQueries({ queryKey: ["admin-steps", lessonId] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "فشل الإضافة");
+    }
+  }
+
+  /** Turn an AI-generated list of bubbles into real steps at the end of the lesson. */
+  async function insertAiSteps(aiSteps: AiStep[]) {
+    const list = stepsQ.data ?? [];
+    const base = (list.at(-1)?.order_index ?? 0) + 1;
+    const chars = charsQ.data ?? [];
+    const rows = aiSteps.map((s, i) => {
+      const char = chars.find((c) => c.name.trim() === (s.character ?? "").trim());
+      const isQ = s.kind === "question" && Array.isArray(s.choices) && s.choices.length >= 2;
+      const isImg = s.kind === "image";
+      return {
+        lesson_id: lessonId,
+        order_index: base + i,
+        kind: isQ ? "question" : isImg ? "image" : "text",
+        content: s.content,
+        media_url: isImg ? DEFAULT_IMAGE : null,
+        admin_note: s.admin_note?.trim() || null,
+        character_id: char?.id ?? null,
+        mood: MOODS.some((m) => m.id === s.mood) ? s.mood : "neutral",
+        options: isQ ? { choices: s.choices, answer: Math.max(0, Math.min((s.choices?.length ?? 1) - 1, s.answer ?? 0)) } : null,
+      };
     });
-    if (error) return toast.error(error.message);
+    const { error } = await supabase.from("lesson_steps").insert(rows as never);
+    if (error) throw new Error(error.message);
     qc.invalidateQueries({ queryKey: ["admin-steps", lessonId] });
   }
+
 
   return (
     <div className="fixed inset-0 z-40 bg-black/50 overflow-y-auto" onClick={onClose}>
@@ -217,18 +272,25 @@ export function LessonEditor({ lessonId, onClose }: { lessonId: string; onClose:
               <div className="flex items-center justify-between">
                 <h3 className="font-extrabold">خطوات الحوار ({stepsQ.data?.length ?? 0})</h3>
               </div>
+
+              <AiComposer characters={(charsQ.data ?? []).map((c) => c.name)} onSteps={insertAiSteps} />
+
               {stepsQ.isLoading && <Center />}
               {stepsQ.data?.map((s, i) => (
-                <StepRow key={s.id} step={s} index={i} total={stepsQ.data!.length} characters={charsQ.data ?? []} lessonId={lessonId} />
+                <div key={s.id} className="space-y-2">
+                  <InsertHere onAdd={(k) => addStep(k, i)} />
+                  <StepRow step={s} index={i} total={stepsQ.data!.length} characters={charsQ.data ?? []} lessonId={lessonId} />
+                </div>
               ))}
               {stepsQ.data?.length === 0 && <p className="text-xs text-muted-foreground font-bold text-center py-6">لا خطوات بعد — أضف أول فقاعة حوار.</p>}
 
               {/* شريط الإضافة أسفل آخر رسالة — لا حاجة للصعود للأعلى */}
               <div className="sticky bottom-2 z-10 rounded-2xl border-2 border-primary/30 bg-background/95 backdrop-blur p-2 shadow-md">
-                <div className="text-[10px] font-extrabold text-muted-foreground mb-1 text-center">أضف رسالة جديدة بعد آخر رسالة</div>
-                <AddBar onAdd={addStep} />
+                <div className="text-[10px] font-extrabold text-muted-foreground mb-1 text-center">أضف النوع التالي بعد آخر رسالة</div>
+                <AddBar onAdd={(k) => addStep(k)} />
               </div>
             </section>
+
 
           </>
         )}
@@ -248,6 +310,72 @@ function AddBar({ onAdd }: { onAdd: (kind: StepKind | "code" | "site") => void }
       <button onClick={() => onAdd("question")} className="px-2 py-1 rounded-lg bg-primary/10 text-primary">+ سؤال</button>
       <button onClick={() => onAdd("site")} className="px-2 py-1 rounded-lg bg-primary/10 text-primary">+ عارض موقع</button>
       <button onClick={() => onAdd("code")} className="px-2 py-1 rounded-lg bg-foreground text-background">+ محرر أكواد</button>
+    </div>
+  );
+}
+
+/** Thin "+" strip between two messages: insert any type exactly here, no reordering needed. */
+function InsertHere({ onAdd }: { onAdd: (kind: StepKind | "code" | "site") => void }) {
+  const [open, setOpen] = useState(false);
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="group w-full flex items-center gap-2 py-0.5 text-primary/60 hover:text-primary"
+      >
+        <span className="h-px flex-1 bg-primary/20 group-hover:bg-primary/50" />
+        <span className="text-[10px] font-extrabold flex items-center gap-1"><Plus className="w-3 h-3" /> إدراج هنا</span>
+        <span className="h-px flex-1 bg-primary/20 group-hover:bg-primary/50" />
+      </button>
+    );
+  }
+  return (
+    <div className="rounded-xl border-2 border-dashed border-primary/40 p-2 space-y-1">
+      <AddBar onAdd={(k) => { setOpen(false); onAdd(k); }} />
+      <button onClick={() => setOpen(false)} className="w-full text-[10px] font-extrabold text-muted-foreground">إلغاء</button>
+    </div>
+  );
+}
+
+/** Paste a raw explanation → AI turns it into dialogue bubbles, questions and image placeholders. */
+function AiComposer({ characters, onSteps }: { characters: string[]; onSteps: (steps: AiStep[]) => Promise<void> }) {
+  const generate = useServerFn(generateLessonSteps);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function run() {
+    if (text.trim().length < 5) return toast.error("اكتب الشرح أولاً");
+    setBusy(true);
+    try {
+      const res = await generate({ data: { explanation: text.trim(), characters } });
+      await onSteps(res.steps);
+      toast.success(`تم إضافة ${res.steps.length} رسالة — عدّل الصور والنصوص كما تريد`);
+      setText("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "فشل التوليد");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border-2 border-primary/30 bg-primary/5 p-3 space-y-2">
+      <div className="text-[11px] font-extrabold text-primary flex items-center gap-1">
+        <Sparkles className="w-4 h-4" /> مولّد الحوار بالذكاء الاصطناعي
+      </div>
+      <p className="text-[10px] font-bold text-muted-foreground leading-5">
+        الصق الشرح كما هو — سيحوّله الذكاء الاصطناعي إلى فقاعات حوار وأسئلة، وكل مكان يحتاج صورة يضع صورة افتراضية + ملاحظة لك لتستبدلها.
+      </p>
+      <textarea
+        rows={4}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="مثال: اشرح للطالب ما هي الأدوات الذكية، ثم صورة لواجهة الأداة، ثم سؤال سريع…"
+        className={`${inp} resize-none`}
+      />
+      <button onClick={run} disabled={busy} className="btn-3d w-full active:btn-3d-active disabled:opacity-60">
+        {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Sparkles className="w-4 h-4" /> توليد الرسائل وإضافتها</>}
+      </button>
     </div>
   );
 }
