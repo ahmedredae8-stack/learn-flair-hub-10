@@ -8,9 +8,11 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { supabase } from "@/integrations/supabase/client";
 
 function NotFoundComponent() {
   return (
@@ -76,23 +78,26 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { name: "google", content: "notranslate" },
+      { title: "nilex — تعلّم أدوات الذكاء الاصطناعي" },
+      { name: "description", content: "منصة nilex لتعلّم أدوات الذكاء الاصطناعي بدروس تفاعلية ومشاريع تمويل جماعي." },
+      { name: "author", content: "nilex" },
+      { property: "og:title", content: "nilex — تعلّم أدوات الذكاء الاصطناعي" },
+      { property: "og:description", content: "منصة nilex لتعلّم أدوات الذكاء الاصطناعي بدروس تفاعلية ومشاريع تمويل جماعي." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "nilex" },
+      { name: "twitter:description", content: "تعلّم أدوات الذكاء الاصطناعي بمتعة." },
     ],
     links: [
-      {
-        rel: "stylesheet",
-        href: appCss,
-      },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "stylesheet", href: appCss },
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" },
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
     ],
+
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -102,11 +107,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="ar" dir="rtl" translate="no" className="notranslate">
       <head>
+        <meta name="google" content="notranslate" />
         <HeadContent />
       </head>
-      <body>
+      <body translate="no" className="notranslate">
         {children}
         <Scripts />
       </body>
@@ -116,11 +122,22 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
+      router.invalidate();
+      if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
+    });
+    return () => data.subscription.unsubscribe();
+  }, [router, queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      <Toaster position="top-center" richColors dir="rtl" />
     </QueryClientProvider>
   );
 }
