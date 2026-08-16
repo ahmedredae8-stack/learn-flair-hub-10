@@ -272,18 +272,25 @@ export function LessonEditor({ lessonId, onClose }: { lessonId: string; onClose:
               <div className="flex items-center justify-between">
                 <h3 className="font-extrabold">خطوات الحوار ({stepsQ.data?.length ?? 0})</h3>
               </div>
+
+              <AiComposer characters={(charsQ.data ?? []).map((c) => c.name)} onSteps={insertAiSteps} />
+
               {stepsQ.isLoading && <Center />}
               {stepsQ.data?.map((s, i) => (
-                <StepRow key={s.id} step={s} index={i} total={stepsQ.data!.length} characters={charsQ.data ?? []} lessonId={lessonId} />
+                <div key={s.id} className="space-y-2">
+                  <InsertHere onAdd={(k) => addStep(k, i)} />
+                  <StepRow step={s} index={i} total={stepsQ.data!.length} characters={charsQ.data ?? []} lessonId={lessonId} />
+                </div>
               ))}
               {stepsQ.data?.length === 0 && <p className="text-xs text-muted-foreground font-bold text-center py-6">لا خطوات بعد — أضف أول فقاعة حوار.</p>}
 
               {/* شريط الإضافة أسفل آخر رسالة — لا حاجة للصعود للأعلى */}
               <div className="sticky bottom-2 z-10 rounded-2xl border-2 border-primary/30 bg-background/95 backdrop-blur p-2 shadow-md">
-                <div className="text-[10px] font-extrabold text-muted-foreground mb-1 text-center">أضف رسالة جديدة بعد آخر رسالة</div>
-                <AddBar onAdd={addStep} />
+                <div className="text-[10px] font-extrabold text-muted-foreground mb-1 text-center">أضف النوع التالي بعد آخر رسالة</div>
+                <AddBar onAdd={(k) => addStep(k)} />
               </div>
             </section>
+
 
           </>
         )}
