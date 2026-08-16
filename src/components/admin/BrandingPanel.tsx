@@ -1,24 +1,14 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { uploadFile } from "@/lib/upload";
 import { SETTING_LABELS, useSaveSetting, useSiteSettings, type SettingKey } from "@/lib/siteSettings";
 import { Loader2, RotateCcw, Upload } from "lucide-react";
 
-const MAX = 5 * 1024 * 1024;
-
 async function uploadBranding(key: string, file: File): Promise<string> {
-  if (file.size > MAX) throw new Error("حجم الملف كبير (الحد الأقصى 5 ميجابايت)");
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "png";
-  const path = `${key}-${Date.now()}.${ext}`;
-  const { error } = await supabase.storage.from("branding").upload(path, file, {
-    cacheControl: "3600",
-    upsert: true,
-    contentType: file.type || undefined,
-  });
-  if (error) throw error;
-  const { data } = supabase.storage.from("branding").getPublicUrl(path);
-  return data.publicUrl;
+  const up = await uploadFile("branding", file, `${key}-`);
+  return up.url;
 }
+
 
 export function BrandingPanel() {
   const { data: settings, isLoading } = useSiteSettings();
