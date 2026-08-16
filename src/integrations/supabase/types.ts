@@ -475,10 +475,13 @@ export type Database = {
           display_name: string | null
           gems: number
           hearts: number
+          hearts_updated_at: string
           id: string
+          last_active_date: string | null
           status: Database["public"]["Enums"]["account_status"]
           status_reason: string | null
           streak: number
+          streak_freeze: number
           suspended_until: string | null
           updated_at: string
           username: string | null
@@ -490,10 +493,13 @@ export type Database = {
           display_name?: string | null
           gems?: number
           hearts?: number
+          hearts_updated_at?: string
           id: string
+          last_active_date?: string | null
           status?: Database["public"]["Enums"]["account_status"]
           status_reason?: string | null
           streak?: number
+          streak_freeze?: number
           suspended_until?: string | null
           updated_at?: string
           username?: string | null
@@ -505,10 +511,13 @@ export type Database = {
           display_name?: string | null
           gems?: number
           hearts?: number
+          hearts_updated_at?: string
           id?: string
+          last_active_date?: string | null
           status?: Database["public"]["Enums"]["account_status"]
           status_reason?: string | null
           streak?: number
+          streak_freeze?: number
           suspended_until?: string | null
           updated_at?: string
           username?: string | null
@@ -700,6 +709,74 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      site_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: string | null
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value?: string | null
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: string | null
+        }
+        Relationships: []
+      }
+      units: {
+        Row: {
+          color: string
+          course_id: string | null
+          cover_url: string | null
+          created_at: string
+          description: string | null
+          emoji: string
+          id: string
+          name: string
+          number: number
+          order_index: number
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          course_id?: string | null
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          emoji?: string
+          id?: string
+          name: string
+          number: number
+          order_index?: number
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          course_id?: string | null
+          cover_url?: string | null
+          created_at?: string
+          description?: string | null
+          emoji?: string
+          id?: string
+          name?: string
+          number?: number
+          order_index?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "units_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
