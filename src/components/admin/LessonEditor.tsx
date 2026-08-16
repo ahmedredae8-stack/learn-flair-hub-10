@@ -314,6 +314,72 @@ function AddBar({ onAdd }: { onAdd: (kind: StepKind | "code" | "site") => void }
   );
 }
 
+/** Thin "+" strip between two messages: insert any type exactly here, no reordering needed. */
+function InsertHere({ onAdd }: { onAdd: (kind: StepKind | "code" | "site") => void }) {
+  const [open, setOpen] = useState(false);
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="group w-full flex items-center gap-2 py-0.5 text-primary/60 hover:text-primary"
+      >
+        <span className="h-px flex-1 bg-primary/20 group-hover:bg-primary/50" />
+        <span className="text-[10px] font-extrabold flex items-center gap-1"><Plus className="w-3 h-3" /> إدراج هنا</span>
+        <span className="h-px flex-1 bg-primary/20 group-hover:bg-primary/50" />
+      </button>
+    );
+  }
+  return (
+    <div className="rounded-xl border-2 border-dashed border-primary/40 p-2 space-y-1">
+      <AddBar onAdd={(k) => { setOpen(false); onAdd(k); }} />
+      <button onClick={() => setOpen(false)} className="w-full text-[10px] font-extrabold text-muted-foreground">إلغاء</button>
+    </div>
+  );
+}
+
+/** Paste a raw explanation → AI turns it into dialogue bubbles, questions and image placeholders. */
+function AiComposer({ characters, onSteps }: { characters: string[]; onSteps: (steps: AiStep[]) => Promise<void> }) {
+  const generate = useServerFn(generateLessonSteps);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function run() {
+    if (text.trim().length < 5) return toast.error("اكتب الشرح أولاً");
+    setBusy(true);
+    try {
+      const res = await generate({ data: { explanation: text.trim(), characters } });
+      await onSteps(res.steps);
+      toast.success(`تم إضافة ${res.steps.length} رسالة — عدّل الصور والنصوص كما تريد`);
+      setText("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "فشل التوليد");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border-2 border-primary/30 bg-primary/5 p-3 space-y-2">
+      <div className="text-[11px] font-extrabold text-primary flex items-center gap-1">
+        <Sparkles className="w-4 h-4" /> مولّد الحوار بالذكاء الاصطناعي
+      </div>
+      <p className="text-[10px] font-bold text-muted-foreground leading-5">
+        الصق الشرح كما هو — سيحوّله الذكاء الاصطناعي إلى فقاعات حوار وأسئلة، وكل مكان يحتاج صورة يضع صورة افتراضية + ملاحظة لك لتستبدلها.
+      </p>
+      <textarea
+        rows={4}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="مثال: اشرح للطالب ما هي الأدوات الذكية، ثم صورة لواجهة الأداة، ثم سؤال سريع…"
+        className={`${inp} resize-none`}
+      />
+      <button onClick={run} disabled={busy} className="btn-3d w-full active:btn-3d-active disabled:opacity-60">
+        {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Sparkles className="w-4 h-4" /> توليد الرسائل وإضافتها</>}
+      </button>
+    </div>
+  );
+}
+
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <label className="block"><span className="text-[11px] font-extrabold text-muted-foreground">{label}</span>{children}</label>;
