@@ -31,7 +31,7 @@ const SYSTEM = `أنت مساعد لبناء دروس تفاعلية عربية 
 
 export const generateLessonSteps = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: unknown) => Input.parse(data))
+  .validator((data: unknown) => Input.parse(data))
   .handler(async ({ data, context }): Promise<{ steps: AiStep[] }> => {
     const { data: roles } = await context.supabase
       .from("user_roles")
