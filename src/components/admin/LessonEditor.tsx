@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { uploadFile } from "@/lib/upload";
@@ -7,8 +8,13 @@ import { AvatarBubble } from "@/components/AvatarBubble";
 import { characterImage } from "@/lib/characterImage";
 import { CodeLab, isCodeLab } from "@/components/lesson/CodeLab";
 import { isSiteView, type SiteSpec } from "@/components/lesson/SiteViewer";
+import { generateLessonSteps, type AiStep } from "@/lib/ai-lesson.functions";
 
-import { Loader2, Plus, Save, Trash2, ArrowUp, ArrowDown, Upload, X } from "lucide-react";
+import { Loader2, Plus, Save, Trash2, ArrowUp, ArrowDown, Upload, X, Sparkles } from "lucide-react";
+
+/** Placeholder picture used for AI/auto image bubbles until the admin uploads the real one. */
+const DEFAULT_IMAGE = "/brand/mascot.png";
+
 
 export const MOODS = [
   { id: "neutral", label: "عادي" },
