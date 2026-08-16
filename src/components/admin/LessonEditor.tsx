@@ -120,10 +120,10 @@ export function LessonEditor({ lessonId, onClose }: { lessonId: string; onClose:
     } catch (e) { toast.error(e instanceof Error ? e.message : "فشل الحفظ"); } finally { setSaving(false); }
   }
 
-  async function addStep(kind: StepKind | "code" | "site") {
-    const order = (stepsQ.data?.length ?? 0) + 1;
+  /** Build the DB payload for a new step of the given kind. */
+  function buildStep(kind: StepKind | "code" | "site", order: number) {
     if (kind === "site") {
-      const { error } = await supabase.from("lesson_steps").insert({
+      return {
         lesson_id: lessonId, order_index: order, kind: "text",
         content: "افتح الموقع بالأسفل ونفّذ المطلوب ثم اضغط «تم».",
         options: {
@@ -138,14 +138,10 @@ export function LessonEditor({ lessonId, onClose }: { lessonId: string; onClose:
             height: 420,
           },
         },
-      } as never);
-      if (error) return toast.error(error.message);
-      qc.invalidateQueries({ queryKey: ["admin-steps", lessonId] });
-      return;
+      };
     }
-
     if (kind === "code") {
-      const { error } = await supabase.from("lesson_steps").insert({
+      return {
         lesson_id: lessonId, order_index: order, kind: "text", content: "",
         options: {
           code: {
@@ -162,18 +158,71 @@ export function LessonEditor({ lessonId, onClose }: { lessonId: string; onClose:
             success: "ناتج صحيح! 🎉",
           },
         },
-      } as never);
-      if (error) return toast.error(error.message);
-      qc.invalidateQueries({ queryKey: ["admin-steps", lessonId] });
-      return;
+      };
     }
-    const { error } = await supabase.from("lesson_steps").insert({
-      lesson_id: lessonId, order_index: order, kind, content: kind === "question" ? "اختر الإجابة الصحيحة" : "",
+    return {
+      lesson_id: lessonId, order_index: order, kind,
+      content: kind === "question" ? "اختر الإجابة الصحيحة" : "",
+      media_url: kind === "image" ? DEFAULT_IMAGE : null,
       options: kind === "question" ? { choices: ["الخيار 1", "الخيار 2"], answer: 0 } : null,
+    };
+  }
+
+  /** Free space for `count` new steps starting at `order` (shift the rest down). */
+  async function shiftFrom(order: number, count: number) {
+    const list = stepsQ.data ?? [];
+    const after = list.filter((s) => s.order_index >= order).sort((a, b) => b.order_index - a.order_index);
+    for (const s of after) {
+      const { error } = await supabase.from("lesson_steps").update({ order_index: s.order_index + count } as never).eq("id", s.id);
+      if (error) throw new Error(error.message);
+    }
+  }
+
+  /** Add a step at the end, or insert it right before step #atIndex. */
+  async function addStep(kind: StepKind | "code" | "site", atIndex?: number) {
+    const list = stepsQ.data ?? [];
+    try {
+      let order: number;
+      if (atIndex == null) {
+        order = (list.at(-1)?.order_index ?? 0) + 1;
+      } else {
+        order = list[atIndex]?.order_index ?? list.length + 1;
+        await shiftFrom(order, 1);
+      }
+      const { error } = await supabase.from("lesson_steps").insert(buildStep(kind, order) as never);
+      if (error) throw new Error(error.message);
+      qc.invalidateQueries({ queryKey: ["admin-steps", lessonId] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "فشل الإضافة");
+    }
+  }
+
+  /** Turn an AI-generated list of bubbles into real steps at the end of the lesson. */
+  async function insertAiSteps(aiSteps: AiStep[]) {
+    const list = stepsQ.data ?? [];
+    const base = (list.at(-1)?.order_index ?? 0) + 1;
+    const chars = charsQ.data ?? [];
+    const rows = aiSteps.map((s, i) => {
+      const char = chars.find((c) => c.name.trim() === (s.character ?? "").trim());
+      const isQ = s.kind === "question" && Array.isArray(s.choices) && s.choices.length >= 2;
+      const isImg = s.kind === "image";
+      return {
+        lesson_id: lessonId,
+        order_index: base + i,
+        kind: isQ ? "question" : isImg ? "image" : "text",
+        content: s.content,
+        media_url: isImg ? DEFAULT_IMAGE : null,
+        admin_note: s.admin_note?.trim() || null,
+        character_id: char?.id ?? null,
+        mood: MOODS.some((m) => m.id === s.mood) ? s.mood : "neutral",
+        options: isQ ? { choices: s.choices, answer: Math.max(0, Math.min((s.choices?.length ?? 1) - 1, s.answer ?? 0)) } : null,
+      };
     });
-    if (error) return toast.error(error.message);
+    const { error } = await supabase.from("lesson_steps").insert(rows as never);
+    if (error) throw new Error(error.message);
     qc.invalidateQueries({ queryKey: ["admin-steps", lessonId] });
   }
+
 
   return (
     <div className="fixed inset-0 z-40 bg-black/50 overflow-y-auto" onClick={onClose}>
