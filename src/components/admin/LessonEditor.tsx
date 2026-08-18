@@ -12,7 +12,7 @@ import { generateLessonSteps, type AiStep } from "@/lib/ai-lesson.functions";
 import { parseLessonScript, type ScriptDraft } from "@/lib/lessonScript";
 
 
-import { Loader2, Plus, Save, Trash2, ArrowUp, ArrowDown, Upload, X, Sparkles } from "lucide-react";
+import { Loader2, Plus, Save, Trash2, ArrowUp, ArrowDown, Upload, X, Sparkles, Code2 } from "lucide-react";
 
 /** Placeholder picture used for AI/auto image bubbles until the admin uploads the real one. */
 const DEFAULT_IMAGE = "/brand/mascot.png";
