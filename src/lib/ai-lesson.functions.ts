@@ -1,37 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { AI_LESSON_SYSTEM, AiLessonInput, type AiStep } from "./ai-lesson.prompt";
 
-const Input = z.object({
-  explanation: z.string().min(5),
-  characters: z.array(z.string()).default([]),
-});
-
-export type AiStep = {
-  kind: "text" | "image" | "question";
-  character: string | null;
-  mood: string;
-  content: string;
-  admin_note?: string | null;
-  choices?: string[];
-  answer?: number;
-};
-
-const SYSTEM = `أنت مساعد لبناء دروس تفاعلية عربية بأسلوب دولينجو.
-تحوّل الشرح الخام إلى سلسلة فقاعات حوار قصيرة (سطر أو سطرين لكل فقاعة) بلغة عربية بسيطة ومرحة.
-قواعد:
-- كل عنصر يمثل رسالة واحدة.
-- kind = "text" لفقاعة كلام، "image" حين يطلب الشرح صورة أو لقطة شاشة أو حين يفيد وجود صورة توضيحية، "question" لسؤال اختيار من متعدد.
-- عناصر image: اكتب في content تعليقاً قصيراً للطالب، وفي admin_note وصفاً دقيقاً للصورة المطلوب رفعها.
-- عناصر question: اكتب السؤال في content، و choices من 2 إلى 4 خيارات، و answer فهرس الإجابة الصحيحة (يبدأ من 0).
-- وزّع الرسائل على الشخصيات المتاحة بالاسم في الحقل character (أو null).
-- mood من: neutral, happy, sad, surprised, thinking, excited.
-- أضف سؤالاً واحداً على الأقل كل 4-6 رسائل.
-أعد JSON فقط بالشكل: {"steps":[...]}`;
+export type { AiStep };
 
 export const generateLessonSteps = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((data: unknown) => Input.parse(data))
+  .validator((data: unknown) => AiLessonInput.parse(data))
   .handler(async ({ data, context }): Promise<{ steps: AiStep[] }> => {
     const { data: roles } = await context.supabase
       .from("user_roles")
@@ -43,16 +18,18 @@ export const generateLessonSteps = createServerFn({ method: "POST" })
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) throw new Error("مفتاح الذكاء الاصطناعي غير مهيّأ");
 
+    const wanted = data.count ? `\n\nعدد الرسائل المطلوب تقريباً: ${data.count}` : "";
+
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
         model: "openai/gpt-5.6-sol",
         messages: [
-          { role: "system", content: SYSTEM },
+          { role: "system", content: AI_LESSON_SYSTEM },
           {
             role: "user",
-            content: `الشخصيات المتاحة: ${data.characters.join("، ") || "بدون"}\n\nالشرح:\n${data.explanation}`,
+            content: `الشخصيات المتاحة: ${data.characters.join("، ") || "بدون"}${wanted}\n\nالشرح:\n${data.explanation}`,
           },
         ],
         response_format: { type: "json_object" },
