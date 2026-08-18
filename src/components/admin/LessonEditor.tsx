@@ -9,6 +9,8 @@ import { characterImage } from "@/lib/characterImage";
 import { CodeLab, isCodeLab } from "@/components/lesson/CodeLab";
 import { isSiteView, type SiteSpec } from "@/components/lesson/SiteViewer";
 import { generateLessonSteps, type AiStep } from "@/lib/ai-lesson.functions";
+import { parseLessonScript, type ScriptDraft } from "@/lib/lessonScript";
+
 
 import { Loader2, Plus, Save, Trash2, ArrowUp, ArrowDown, Upload, X, Sparkles } from "lucide-react";
 
