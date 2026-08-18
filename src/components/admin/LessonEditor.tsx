@@ -401,13 +401,14 @@ function InsertHere({ onAdd }: { onAdd: (kind: StepKind | "code" | "site") => vo
 function AiComposer({ characters, onSteps }: { characters: string[]; onSteps: (steps: AiStep[]) => Promise<void> }) {
   const generate = useServerFn(generateLessonSteps);
   const [text, setText] = useState("");
+  const [count, setCount] = useState(12);
   const [busy, setBusy] = useState(false);
 
   async function run() {
     if (text.trim().length < 5) return toast.error("اكتب الشرح أولاً");
     setBusy(true);
     try {
-      const res = await generate({ data: { explanation: text.trim(), characters } });
+      const res = await generate({ data: { explanation: text.trim(), characters, count } });
       await onSteps(res.steps);
       toast.success(`تم إضافة ${res.steps.length} رسالة — عدّل الصور والنصوص كما تريد`);
       setText("");
@@ -424,7 +425,7 @@ function AiComposer({ characters, onSteps }: { characters: string[]; onSteps: (s
         <Sparkles className="w-4 h-4" /> مولّد الحوار بالذكاء الاصطناعي
       </div>
       <p className="text-[10px] font-bold text-muted-foreground leading-5">
-        الصق الشرح كما هو — سيحوّله الذكاء الاصطناعي إلى فقاعات حوار وأسئلة، وكل مكان يحتاج صورة يضع صورة افتراضية + ملاحظة لك لتستبدلها.
+        الصق الشرح كما هو — سيحوّله الذكاء الاصطناعي إلى فقاعات حوار وأسئلة، وكل مكان يحتاج صورة يضع صورة افتراضية + وصفاً دقيقاً للصورة في «ملاحظة الأدمن» لتنفّذها بنفسك.
       </p>
       <textarea
         rows={4}
@@ -433,12 +434,103 @@ function AiComposer({ characters, onSteps }: { characters: string[]; onSteps: (s
         placeholder="مثال: اشرح للطالب ما هي الأدوات الذكية، ثم صورة لواجهة الأداة، ثم سؤال سريع…"
         className={`${inp} resize-none`}
       />
+      <label className="flex items-center gap-2">
+        <span className="text-[10px] font-extrabold text-muted-foreground shrink-0">عدد الرسائل تقريباً</span>
+        <input
+          type="range"
+          min={3}
+          max={40}
+          value={count}
+          onChange={(e) => setCount(Number(e.target.value))}
+          className="flex-1 accent-primary"
+        />
+        <span className="w-8 text-center text-[12px] font-extrabold text-primary">{count}</span>
+      </label>
       <button onClick={run} disabled={busy} className="btn-3d w-full active:btn-3d-active disabled:opacity-60">
         {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Sparkles className="w-4 h-4" /> توليد الرسائل وإضافتها</>}
       </button>
     </div>
   );
 }
+
+/**
+ * Shorthand authoring: the admin writes tagged lines and gets real steps.
+ * The number on the tag picks the character from the list shown in the legend.
+ */
+function ScriptComposer({ characters, onDrafts }: { characters: string[]; onDrafts: (drafts: ScriptDraft[]) => Promise<void> }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const parsed = parseLessonScript(text);
+
+  async function run() {
+    if (!parsed.drafts.length) return toast.error("اكتب سطراً واحداً على الأقل");
+    setBusy(true);
+    try {
+      await onDrafts(parsed.drafts);
+      toast.success(`تم إضافة ${parsed.drafts.length} رسالة من الشفرة`);
+      setText("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "فشل الإدراج");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full rounded-2xl border-2 border-dashed border-foreground/25 py-2 text-[11px] font-extrabold text-muted-foreground flex items-center justify-center gap-1"
+      >
+        <Code2 className="w-4 h-4" /> كتابة الدرس بالشفرة السريعة {"<p1>"}
+      </button>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border-2 border-foreground/25 bg-secondary/40 p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="text-[11px] font-extrabold flex items-center gap-1"><Code2 className="w-4 h-4" /> الشفرة السريعة</div>
+        <button onClick={() => setOpen(false)} className="text-[10px] font-extrabold text-muted-foreground">إغلاق</button>
+      </div>
+
+      <div className="rounded-xl bg-background border-2 border-border p-2 text-[10px] font-bold leading-6" dir="ltr">
+        <div>{"<p1> نص الرسالة  —  فقاعة كلام للشخصية رقم 1"}</div>
+        <div>{"<p2:happy> نص  —  مع تحديد المزاج"}</div>
+        <div>{"<img1> وصف الصورة | تعليق للطالب"}</div>
+        <div>{"<vid> وصف الفيديو"}</div>
+        <div>{"<q1> السؤال | خيار | *الخيار الصحيح"}</div>
+        <div>{"<site> اسم الموقع | https://example.com | المهمة"}</div>
+        <div>{"<code> معمل أكواد"}</div>
+      </div>
+
+      <div className="text-[10px] font-extrabold text-muted-foreground leading-6">
+        أرقام الشخصيات: {characters.length ? characters.map((n, i) => `${i + 1}=${n}`).join(" · ") : "لا شخصيات بعد"}
+      </div>
+
+      <textarea
+        rows={7}
+        dir="auto"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder={"<p1> أهلاً بك في الدرس\n<img1> لقطة شاشة لواجهة الأداة\n<q1> ما هو HTML؟ | لغة تنسيق | *لغة بناء الصفحة"}
+        className={`${inp} resize-none font-mono text-[12px]`}
+      />
+
+      {parsed.errors.length > 0 && (
+        <ul className="text-[10px] font-extrabold text-heart space-y-0.5">
+          {parsed.errors.map((e, i) => <li key={i}>{e}</li>)}
+        </ul>
+      )}
+
+      <button onClick={run} disabled={busy} className="btn-3d w-full active:btn-3d-active disabled:opacity-60">
+        {busy ? <Loader2 className="w-5 h-5 animate-spin" /> : `إدراج ${parsed.drafts.length} رسالة`}
+      </button>
+    </div>
+  );
+}
+
 
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
