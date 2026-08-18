@@ -332,6 +332,8 @@ export function LessonEditor({ lessonId, onClose }: { lessonId: string; onClose:
               </div>
 
               <AiComposer characters={(charsQ.data ?? []).map((c) => c.name)} onSteps={insertAiSteps} />
+              <ScriptComposer characters={(charsQ.data ?? []).map((c) => c.name)} onDrafts={insertDrafts} />
+
 
               {stepsQ.isLoading && <Center />}
               {stepsQ.data?.map((s, i) => (
