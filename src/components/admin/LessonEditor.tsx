@@ -229,6 +229,62 @@ export function LessonEditor({ lessonId, onClose }: { lessonId: string; onClose:
     qc.invalidateQueries({ queryKey: ["admin-steps", lessonId] });
   }
 
+  /** Turn shorthand script lines (<p1> … <q2> …) into real steps at the end of the lesson. */
+  async function insertDrafts(drafts: ScriptDraft[]) {
+    const list = stepsQ.data ?? [];
+    const base = (list.at(-1)?.order_index ?? 0) + 1;
+    const chars = charsQ.data ?? [];
+    const rows = drafts.map((d, i) => {
+      const char = d.charIndex != null ? chars[d.charIndex] : undefined;
+      const isImg = d.kind === "image";
+      let options: unknown = null;
+      if (d.kind === "question") options = { choices: d.choices, answer: d.answer ?? 0 };
+      else if (d.site)
+        options = {
+          site: {
+            key: `site-${d.site.url}`,
+            title: d.site.title,
+            tabs: [{ label: d.site.title, url: d.site.url }],
+            task: d.site.task ?? "",
+            require_done: !!d.site.task,
+            done_label: "تم ✅",
+            height: 420,
+          },
+        };
+      else if (d.code)
+        options = {
+          code: {
+            title: "معمل الأكواد",
+            language: "html",
+            brief: "اكتب الكود المطلوب ثم اضغط تشغيل لترى الناتج.",
+            steps: ["اقرأ الدليل", "اكتب الكود", "شغّل وقارن الناتج"],
+            expected_html: "<h1>مرحبا</h1>",
+            starter: "",
+            solution: "<h1>مرحبا</h1>",
+            checks: [{ type: "includes", value: "<h1>", hint: "استخدم وسم <h1>" }],
+            hints: [],
+            refs: [],
+            success: "ناتج صحيح! 🎉",
+          },
+        };
+      return {
+        lesson_id: lessonId,
+        order_index: base + i,
+        kind: d.kind === "question" ? "question" : isImg ? "image" : d.kind === "video" ? "video" : "text",
+        content: d.content,
+        media_url: isImg ? DEFAULT_IMAGE : null,
+        admin_note: d.admin_note,
+        character_id: char?.id ?? null,
+        mood: d.mood,
+        options,
+      };
+    });
+    const { error } = await supabase.from("lesson_steps").insert(rows as never);
+    if (error) throw new Error(error.message);
+    qc.invalidateQueries({ queryKey: ["admin-steps", lessonId] });
+  }
+
+
 
   return (
     <div className="fixed inset-0 z-40 bg-black/50 overflow-y-auto" onClick={onClose}>
