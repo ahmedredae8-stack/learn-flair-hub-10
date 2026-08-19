@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowUpRight, Check, Globe, ListChecks, RefreshCw, ArrowDown, AlertTriangle, ExternalLink, MonitorSmartphone } from "lucide-react";
+import { ArrowUpRight, Check, Globe, ListChecks, RefreshCw, ArrowDown, AlertTriangle, ExternalLink, MonitorSmartphone, Smartphone, Maximize2, Minimize2, Lock } from "lucide-react";
 
 /**
  * A live website shown *inside* the lesson.
@@ -110,6 +110,8 @@ export function SiteViewer({
   const [windowMode, setWindowMode] = useState(!!spec.force_window);
   const [visited, setVisited] = useState(false);
   const [returned, setReturned] = useState(false);
+  const [full, setFull] = useState(false);
+  const [device, setDevice] = useState<"full" | "phone">("full");
   const loadedRef = useRef(false);
   const requireDone = spec.require_done ?? !!spec.task;
   const currentUrl = tabs[Math.min(tab, tabs.length - 1)].url;
