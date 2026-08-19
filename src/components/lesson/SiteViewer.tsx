@@ -296,7 +296,7 @@ export function SiteViewer({
           )}
         </div>
       ) : (
-        <div className="bg-background relative">
+        <div className={`bg-background relative ${device === "phone" ? "mx-auto max-w-[390px]" : ""} ${full ? "flex-1" : ""}`}>
           {/* Every tab keeps its own frame alive; hidden tabs are not unmounted, so
               logins and half-finished work survive switching back and forth. */}
           {tabs.map((t, i) => (
@@ -310,7 +310,7 @@ export function SiteViewer({
               referrerPolicy="no-referrer-when-downgrade"
               sandbox="allow-forms allow-modals allow-popups allow-same-origin allow-scripts allow-downloads"
               className={`w-full bg-white ${i === tab ? "block" : "hidden"}`}
-              style={{ height: spec.height ?? 420 }}
+              style={{ height: full ? "100%" : (spec.height ?? 420) }}
             />
           ))}
           {blocked && (
