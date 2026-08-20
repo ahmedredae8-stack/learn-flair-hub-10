@@ -331,7 +331,24 @@ export function LessonEditor({ lessonId, onClose }: { lessonId: string; onClose:
                 <h3 className="font-extrabold">خطوات الحوار ({stepsQ.data?.length ?? 0})</h3>
               </div>
 
-              <AiComposer characters={(charsQ.data ?? []).map((c) => c.name)} onSteps={insertAiSteps} />
+              <AiComposer
+                characters={(charsQ.data ?? []).map((c) => c.name)}
+                onSteps={insertAiSteps}
+                context={{
+                  courseTitle: (coursesQ.data ?? []).find((c) => c.id === form.course_id)?.title,
+                  unitNumber: form.unit,
+                  lessonNumber: form.order_index,
+                  lessonTitle: form.title,
+                }}
+                onMeta={(objectives, summary) =>
+                  setForm((f) => ({
+                    ...f,
+                    objectives: objectives.length ? objectives : f.objectives,
+                    summary_points: summary.length ? summary : f.summary_points,
+                  }))
+                }
+              />
+
               <ScriptComposer characters={(charsQ.data ?? []).map((c) => c.name)} onDrafts={insertDrafts} />
 
 
