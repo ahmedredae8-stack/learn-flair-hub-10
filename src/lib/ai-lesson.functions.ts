@@ -1,55 +1,109 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { AI_LESSON_SYSTEM, AiLessonInput, type AiStep } from "./ai-lesson.prompt";
+import {
+  AI_LESSON_SYSTEM,
+  AI_UNIT_SYSTEM,
+  AiLessonInput,
+  AiUnitInput,
+  type AiLessonResult,
+  type AiStep,
+  type AiUnitLesson,
+} from "./ai-lesson.prompt";
 
-export type { AiStep };
+export type { AiStep, AiUnitLesson };
+
+async function callGateway(system: string, user: string): Promise<Record<string, unknown>> {
+  const apiKey = process.env["LOVABLE_API_KEY"];
+  if (!apiKey) throw new Error("مفتاح الذكاء الاصطناعي غير مهيّأ");
+
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: "openai/gpt-5.6-sol",
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: user },
+      ],
+      response_format: { type: "json_object" },
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`فشل توليد المحتوى (${res.status}): ${body.slice(0, 200)}`);
+  }
+
+  const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+  const raw = json.choices?.[0]?.message?.content ?? "{}";
+  try {
+    return JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    throw new Error("رد الذكاء الاصطناعي غير صالح");
+  }
+}
+
+async function assertAdmin(context: { supabase: { from: (t: string) => never }; userId: string }) {
+  const { data: roles } = await (context.supabase as unknown as {
+    from: (t: string) => {
+      select: (c: string) => {
+        eq: (a: string, b: string) => { eq: (a: string, b: string) => Promise<{ data: unknown[] | null }> };
+      };
+    };
+  })
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", context.userId)
+    .eq("role", "admin");
+  if (!roles || roles.length === 0) throw new Error("للمديرين فقط");
+}
 
 export const generateLessonSteps = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((data: unknown) => AiLessonInput.parse(data))
-  .handler(async ({ data, context }): Promise<{ steps: AiStep[] }> => {
-    const { data: roles } = await context.supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", context.userId)
-      .eq("role", "admin");
-    if (!roles || roles.length === 0) throw new Error("للمديرين فقط");
-
-    const apiKey = process.env["LOVABLE_API_KEY"];
-    if (!apiKey) throw new Error("مفتاح الذكاء الاصطناعي غير مهيّأ");
+  .handler(async ({ data, context }): Promise<AiLessonResult> => {
+    await assertAdmin(context as never);
 
     const wanted = data.count ? `\n\nعدد الرسائل المطلوب تقريباً: ${data.count}` : "";
+    const ctx = data.context;
+    const ctxText = ctx
+      ? `\n\nسياق الدرس:\n- الكورس: ${ctx.courseTitle ?? "-"}\n- الوحدة ${ctx.unitNumber ?? "-"}: ${ctx.unitName ?? "-"}\n- الدرس ${ctx.lessonNumber ?? "-"}: ${ctx.lessonTitle ?? "-"}\n- الدرس السابق: ${ctx.previousLesson ?? "لا يوجد"}\n- الدرس القادم: ${ctx.nextLesson ?? "لا يوجد"}`
+      : "";
+    const meta = data.withMeta ? "\n\nأعد أيضاً objectives و summary_points لهذا الدرس." : "";
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: "openai/gpt-5.6-sol",
-        messages: [
-          { role: "system", content: AI_LESSON_SYSTEM },
-          {
-            role: "user",
-            content: `الشخصيات المتاحة: ${data.characters.join("، ") || "بدون"}${wanted}\n\nالشرح:\n${data.explanation}`,
-          },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    });
+    const parsed = await callGateway(
+      AI_LESSON_SYSTEM,
+      `الشخصيات المتاحة: ${data.characters.join("، ") || "بدون"}${wanted}${ctxText}${meta}\n\nالشرح:\n${data.explanation}`,
+    );
 
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`فشل توليد المحتوى (${res.status}): ${body.slice(0, 200)}`);
-    }
-
-    const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-    const raw = json.choices?.[0]?.message?.content ?? "{}";
-    let parsed: { steps?: AiStep[] };
-    try {
-      parsed = JSON.parse(raw) as { steps?: AiStep[] };
-    } catch {
-      throw new Error("رد الذكاء الاصطناعي غير صالح");
-    }
-    const steps = (parsed.steps ?? []).filter((s) => s && typeof s.content === "string");
+    const steps = ((parsed["steps"] as AiStep[] | undefined) ?? []).filter(
+      (s) => s && typeof s.content === "string",
+    );
     if (!steps.length) throw new Error("لم يتم توليد أي رسائل");
-    return { steps };
+    const strings = (v: unknown) =>
+      Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && !!x.trim()) : [];
+    return {
+      steps,
+      objectives: strings(parsed["objectives"]),
+      summary_points: strings(parsed["summary_points"]),
+    };
+  });
+
+/** Plan a whole unit: titles, intros, objectives and summaries for every lesson. */
+export const generateUnitPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((data: unknown) => AiUnitInput.parse(data))
+  .handler(async ({ data, context }): Promise<{ lessons: AiUnitLesson[] }> => {
+    await assertAdmin(context as never);
+
+    const parsed = await callGateway(
+      AI_UNIT_SYSTEM,
+      `الكورس: ${data.courseTitle}\nالوحدة ${data.unitNumber}: ${data.unitName}\nعدد الدروس المطلوب: ${data.lessonCount}\n\nمعلومات وأهداف يبني عليها المنهج:\n${data.brief}`,
+    );
+
+    const lessons = ((parsed["lessons"] as AiUnitLesson[] | undefined) ?? []).filter(
+      (l) => l && typeof l.title === "string" && l.title.trim(),
+    );
+    if (!lessons.length) throw new Error("لم يتم توليد خطة الوحدة");
+    return { lessons };
   });
