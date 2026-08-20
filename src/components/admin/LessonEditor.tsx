@@ -331,7 +331,24 @@ export function LessonEditor({ lessonId, onClose }: { lessonId: string; onClose:
                 <h3 className="font-extrabold">خطوات الحوار ({stepsQ.data?.length ?? 0})</h3>
               </div>
 
-              <AiComposer characters={(charsQ.data ?? []).map((c) => c.name)} onSteps={insertAiSteps} />
+              <AiComposer
+                characters={(charsQ.data ?? []).map((c) => c.name)}
+                onSteps={insertAiSteps}
+                context={{
+                  courseTitle: (coursesQ.data ?? []).find((c) => c.id === form.course_id)?.title,
+                  unitNumber: form.unit,
+                  lessonNumber: form.order_index,
+                  lessonTitle: form.title,
+                }}
+                onMeta={(objectives, summary) =>
+                  setForm((f) => ({
+                    ...f,
+                    objectives: objectives.length ? objectives : f.objectives,
+                    summary_points: summary.length ? summary : f.summary_points,
+                  }))
+                }
+              />
+
               <ScriptComposer characters={(charsQ.data ?? []).map((c) => c.name)} onDrafts={insertDrafts} />
 
 
@@ -398,7 +415,12 @@ function InsertHere({ onAdd }: { onAdd: (kind: StepKind | "code" | "site") => vo
 }
 
 /** Paste a raw explanation → AI turns it into dialogue bubbles, questions and image placeholders. */
-function AiComposer({ characters, onSteps }: { characters: string[]; onSteps: (steps: AiStep[]) => Promise<void> }) {
+function AiComposer({ characters, onSteps, context, onMeta }: {
+  characters: string[];
+  onSteps: (steps: AiStep[]) => Promise<void>;
+  context?: { courseTitle?: string; unitNumber?: number; lessonNumber?: number; lessonTitle?: string };
+  onMeta?: (objectives: string[], summary: string[]) => void;
+}) {
   const generate = useServerFn(generateLessonSteps);
   const [text, setText] = useState("");
   const [count, setCount] = useState(12);
@@ -408,8 +430,11 @@ function AiComposer({ characters, onSteps }: { characters: string[]; onSteps: (s
     if (text.trim().length < 5) return toast.error("اكتب الشرح أولاً");
     setBusy(true);
     try {
-      const res = await generate({ data: { explanation: text.trim(), characters, count } });
+      const res = await generate({
+        data: { explanation: text.trim(), characters, count, context, withMeta: true },
+      });
       await onSteps(res.steps);
+      onMeta?.(res.objectives ?? [], res.summary_points ?? []);
       toast.success(`تم إضافة ${res.steps.length} رسالة — عدّل الصور والنصوص كما تريد`);
       setText("");
     } catch (e) {
