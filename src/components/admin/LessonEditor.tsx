@@ -415,7 +415,12 @@ function InsertHere({ onAdd }: { onAdd: (kind: StepKind | "code" | "site") => vo
 }
 
 /** Paste a raw explanation → AI turns it into dialogue bubbles, questions and image placeholders. */
-function AiComposer({ characters, onSteps }: { characters: string[]; onSteps: (steps: AiStep[]) => Promise<void> }) {
+function AiComposer({ characters, onSteps, context, onMeta }: {
+  characters: string[];
+  onSteps: (steps: AiStep[]) => Promise<void>;
+  context?: { courseTitle?: string; unitNumber?: number; lessonNumber?: number; lessonTitle?: string };
+  onMeta?: (objectives: string[], summary: string[]) => void;
+}) {
   const generate = useServerFn(generateLessonSteps);
   const [text, setText] = useState("");
   const [count, setCount] = useState(12);
@@ -425,8 +430,11 @@ function AiComposer({ characters, onSteps }: { characters: string[]; onSteps: (s
     if (text.trim().length < 5) return toast.error("اكتب الشرح أولاً");
     setBusy(true);
     try {
-      const res = await generate({ data: { explanation: text.trim(), characters, count } });
+      const res = await generate({
+        data: { explanation: text.trim(), characters, count, context, withMeta: true },
+      });
       await onSteps(res.steps);
+      onMeta?.(res.objectives ?? [], res.summary_points ?? []);
       toast.success(`تم إضافة ${res.steps.length} رسالة — عدّل الصور والنصوص كما تريد`);
       setText("");
     } catch (e) {
