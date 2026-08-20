@@ -42,13 +42,13 @@
 
 :root {
   --radius: 1rem;
-  --background: oklch(0.99 0.005 300);
-  --foreground: oklch(0.2 0.03 280);
+  --background: oklch(0.99 0.008 240);
+  --foreground: oklch(0.2 0.035 250);
 
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.03 280);
+  --card-foreground: oklch(0.2 0.035 250);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.03 280);
+  --popover-foreground: oklch(0.2 0.035 250);
 
   /* Codico blue — friendly robot palette */
   --primary: oklch(0.62 0.16 250);
