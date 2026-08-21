@@ -317,6 +317,9 @@ function CharacterCard({ character, onDelete }: { character: Record<string, unkn
           </label>
         ))}
       </div>
+      <button onClick={useMascotPoses} disabled={busy === "mascot"} className="w-full rounded-xl border-2 border-primary/40 bg-primary/10 py-2 text-[11px] font-extrabold text-primary disabled:opacity-60">
+        {busy === "mascot" ? "جارٍ التعيين…" : "استخدم ملامح الماسكوت (٦ وضعيات)"}
+      </button>
     </li>
   );
 }
@@ -362,6 +365,7 @@ function LessonsPanel() {
 
   return (
     <div className="space-y-4">
+      <UnitBuilder />
       <div className="bg-card border-2 border-border rounded-2xl p-4 space-y-2">
         <div className="font-extrabold text-sm mb-1">إضافة درس</div>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="عنوان الدرس" className={inp} />
