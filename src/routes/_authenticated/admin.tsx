@@ -268,6 +268,18 @@ function CharacterCard({ character, onDelete }: { character: Record<string, unkn
     } catch (e) { toast.error(e instanceof Error ? e.message : "فشل الرفع"); } finally { setBusy(null); }
   }
 
+  /** One click: give this character the six ready-made mascot poses. */
+  async function useMascotPoses() {
+    setBusy("mascot");
+    try {
+      const { error } = await supabase.from("characters").update({ moods: { ...moods, ...MASCOT_MOODS } }).eq("id", id);
+      if (error) throw error;
+      toast.success("تم تعيين ملامح الماسكوت");
+      qc.invalidateQueries({ queryKey: ["admin-characters"] });
+      qc.invalidateQueries({ queryKey: ["characters-all"] });
+    } catch (e) { toast.error(e instanceof Error ? e.message : "فشل التعيين"); } finally { setBusy(null); }
+  }
+
   return (
     <li className="bg-card border-2 border-border rounded-2xl p-3 space-y-3">
       <div className="flex items-center gap-3">
