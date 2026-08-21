@@ -10,6 +10,8 @@ import { characterImage } from "@/lib/characterImage";
 import { LessonEditor, MOODS } from "@/components/admin/LessonEditor";
 import { CoursesPanel } from "@/components/admin/CoursesPanel";
 import { BrandingPanel } from "@/components/admin/BrandingPanel";
+import { UnitBuilder } from "@/components/admin/UnitBuilder";
+import { MASCOT_MOODS } from "@/lib/mascotMoods";
 import { uploadFile } from "@/lib/upload";
 import { toast } from "sonner";
 import {
@@ -266,6 +268,18 @@ function CharacterCard({ character, onDelete }: { character: Record<string, unkn
     } catch (e) { toast.error(e instanceof Error ? e.message : "فشل الرفع"); } finally { setBusy(null); }
   }
 
+  /** One click: give this character the six ready-made mascot poses. */
+  async function useMascotPoses() {
+    setBusy("mascot");
+    try {
+      const { error } = await supabase.from("characters").update({ moods: { ...moods, ...MASCOT_MOODS } }).eq("id", id);
+      if (error) throw error;
+      toast.success("تم تعيين ملامح الماسكوت");
+      qc.invalidateQueries({ queryKey: ["admin-characters"] });
+      qc.invalidateQueries({ queryKey: ["characters-all"] });
+    } catch (e) { toast.error(e instanceof Error ? e.message : "فشل التعيين"); } finally { setBusy(null); }
+  }
+
   return (
     <li className="bg-card border-2 border-border rounded-2xl p-3 space-y-3">
       <div className="flex items-center gap-3">
@@ -303,6 +317,9 @@ function CharacterCard({ character, onDelete }: { character: Record<string, unkn
           </label>
         ))}
       </div>
+      <button onClick={useMascotPoses} disabled={busy === "mascot"} className="w-full rounded-xl border-2 border-primary/40 bg-primary/10 py-2 text-[11px] font-extrabold text-primary disabled:opacity-60">
+        {busy === "mascot" ? "جارٍ التعيين…" : "استخدم ملامح الماسكوت (٦ وضعيات)"}
+      </button>
     </li>
   );
 }
@@ -348,6 +365,7 @@ function LessonsPanel() {
 
   return (
     <div className="space-y-4">
+      <UnitBuilder />
       <div className="bg-card border-2 border-border rounded-2xl p-4 space-y-2">
         <div className="font-extrabold text-sm mb-1">إضافة درس</div>
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="عنوان الدرس" className={inp} />
