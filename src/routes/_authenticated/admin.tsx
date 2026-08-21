@@ -10,6 +10,8 @@ import { characterImage } from "@/lib/characterImage";
 import { LessonEditor, MOODS } from "@/components/admin/LessonEditor";
 import { CoursesPanel } from "@/components/admin/CoursesPanel";
 import { BrandingPanel } from "@/components/admin/BrandingPanel";
+import { UnitBuilder } from "@/components/admin/UnitBuilder";
+import { MASCOT_MOODS } from "@/lib/mascotMoods";
 import { uploadFile } from "@/lib/upload";
 import { toast } from "sonner";
 import {
