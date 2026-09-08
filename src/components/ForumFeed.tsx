@@ -12,7 +12,7 @@ const EMOJIS = ["❤️", "👍", "😂", "🤯", "🔥"];
 
 async function fetchAuthors(ids: string[]) {
   if (!ids.length) return new Map<string, Author>();
-  const { data } = await supabase.from("profiles").select("id,display_name,username,avatar_url").in("id", ids);
+  const { data } = await supabase.from("public_profiles").select("id,display_name,username,avatar_url").in("id", ids);
   return new Map((data ?? []).map((a) => [a.id, a as Author]));
 }
 

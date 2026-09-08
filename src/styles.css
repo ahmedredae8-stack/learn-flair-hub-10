@@ -42,8 +42,8 @@
 
 :root {
   --radius: 1rem;
-  --background: oklch(0.99 0.008 240);
-  --foreground: oklch(0.2 0.035 250);
+  --background: oklch(0.99 0.01 300);
+  --foreground: oklch(0.2 0.04 295);
 
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.2 0.035 250);
@@ -51,34 +51,34 @@
   --popover-foreground: oklch(0.2 0.035 250);
 
   /* Codico blue — friendly robot palette */
-  --primary: oklch(0.62 0.16 250);
+  --primary: oklch(0.55 0.22 295);
   --primary-foreground: oklch(1 0 0);
-  --primary-shadow: oklch(0.5 0.15 250);
+  --primary-shadow: oklch(0.44 0.2 295);
 
-  --secondary: oklch(0.95 0.03 245);
-  --secondary-foreground: oklch(0.38 0.12 250);
+  --secondary: oklch(0.95 0.04 295);
+  --secondary-foreground: oklch(0.4 0.15 295);
 
-  --muted: oklch(0.96 0.012 240);
-  --muted-foreground: oklch(0.5 0.03 245);
+  --muted: oklch(0.96 0.015 300);
+  --muted-foreground: oklch(0.5 0.035 300);
 
   /* Sky accent */
-  --accent: oklch(0.75 0.12 230);
+  --accent: oklch(0.68 0.18 320);
   --accent-foreground: oklch(1 0 0);
-  --accent-shadow: oklch(0.6 0.13 230);
+  --accent-shadow: oklch(0.56 0.18 320);
 
   --destructive: oklch(0.62 0.24 25);
   --destructive-foreground: oklch(1 0 0);
 
-  --border: oklch(0.9 0.02 240);
-  --input: oklch(0.92 0.02 240);
-  --ring: oklch(0.62 0.16 250);
+  --border: oklch(0.9 0.02 300);
+  --input: oklch(0.92 0.02 300);
+  --ring: oklch(0.55 0.22 295);
 
   --streak: oklch(0.72 0.19 55);   /* orange flame */
-  --gem: oklch(0.7 0.15 235);       /* blue gem */
+  --gem: oklch(0.7 0.16 300);       /* blue gem */
   --heart: oklch(0.65 0.24 20);     /* red heart */
 
-  --locked: oklch(0.89 0.012 240);
-  --locked-shadow: oklch(0.79 0.012 240);
+  --locked: oklch(0.89 0.012 300);
+  --locked-shadow: oklch(0.79 0.012 300);
 }
 
 @layer base {

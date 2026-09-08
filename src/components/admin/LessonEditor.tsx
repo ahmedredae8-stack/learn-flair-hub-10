@@ -318,6 +318,21 @@ export function LessonEditor({ lessonId, onClose }: { lessonId: string; onClose:
                   <option value="draft">مسودة</option><option value="published">منشور</option><option value="archived">أرشيف</option>
                 </select>
               </Field>
+              {form.status !== "published" && (
+                <button
+                  onClick={async () => {
+                    const { error } = await supabase.from("lessons").update({ status: "published" } as never).eq("id", lessonId);
+                    if (error) return toast.error(error.message);
+                    setForm({ ...form, status: "published" });
+                    toast.success("تم نشر الدرس");
+                    qc.invalidateQueries({ queryKey: ["admin-lessons"] });
+                    qc.invalidateQueries({ queryKey: ["lessons-path"] });
+                  }}
+                  className="w-full py-3 rounded-xl bg-emerald-500 text-white font-extrabold text-sm"
+                >
+                  نشر الدرس الآن
+                </button>
+              )}
 
               <ListEditor label="أهداف الدرس (ماذا سيتعلّم)" items={form.objectives} onChange={(v) => setForm({ ...form, objectives: v })} />
               <ListEditor label="ملخص نهاية الدرس (نقاط ✓)" items={form.summary_points} onChange={(v) => setForm({ ...form, summary_points: v })} />

@@ -7,6 +7,7 @@ import { useProfile } from "@/lib/useProfile";
 import { ChatMockup, isChatDemo } from "@/components/lesson/ChatMockup";
 import { CodeLab, isCodeLab } from "@/components/lesson/CodeLab";
 import { SiteViewer, isSiteView, resetSiteOwners } from "@/components/lesson/SiteViewer";
+import { PhysicsLab, isPhysicsLab } from "@/components/lesson/PhysicsLab";
 import { EconomySheet } from "@/components/EconomySheet";
 import { GEMS_PER_LESSON, loseHeart, nextStreak, regenerated } from "@/lib/economy";
 import { characterImage } from "@/lib/characterImage";
@@ -31,7 +32,7 @@ export const Route = createFileRoute("/_authenticated/lesson/$lessonId")({
 type Step = {
   id: string;
   order_index: number;
-  kind: "text" | "image" | "video" | "question";
+  kind: "text" | "image" | "video" | "question" | "simulation";
   content: string | null;
   media_url: string | null;
   options: unknown;
@@ -114,6 +115,10 @@ function LessonPlayer() {
       (() => {
         const site = isSiteView(currentStep.options);
         return !!site && (site.require_done ?? !!site.task) && !siteDone.has(currentStep.id);
+      })() ||
+      (() => {
+        const sim = isPhysicsLab(currentStep.options);
+        return !!sim && !!sim.task && !siteDone.has(currentStep.id);
       })());
 
   // Each lesson owns its own live site frames.
@@ -381,6 +386,23 @@ function Bubble({ step, character, answer, onAnswer, onCodePass, lessonId, siteD
   const demo = isChatDemo(step.options);
   const lab = isCodeLab(step.options);
   const site = isSiteView(step.options);
+  const sim = isPhysicsLab(step.options);
+
+
+  // A physics experiment is a full-width playground inside the conversation.
+  if (sim) {
+    return (
+      <div className="animate-in fade-in slide-in-from-bottom-6 duration-500 ease-out space-y-3">
+        {step.content && (
+          <div className="flex items-start gap-2.5">
+            {character ? <AvatarBubble id={img} size={40} /> : <BrandMascot slot="mascot_lesson" size={40} className="w-10 h-10 shrink-0 object-contain" />}
+            <p className="flex-1 rounded-3xl rounded-tr-md bg-card border-2 border-border px-4 py-3 text-[15px] font-bold leading-8">{step.content}</p>
+          </div>
+        )}
+        <PhysicsLab spec={sim} done={siteDone} onDone={onSiteDone} />
+      </div>
+    );
+  }
 
   // A website shown inside the lesson keeps its own session across messages.
   if (site) {

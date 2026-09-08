@@ -172,9 +172,9 @@ function MascotPanel() {
   const { data: profile } = useProfile();
   return (
     <div className="mx-4 mt-4 mb-2 rounded-2xl bg-card border border-border p-4 flex items-center gap-3 shadow-sm">
-      <BrandMascot slot="mascot_home" alt="زكي المساعد" size={64} className="w-16 h-16 animate-bob object-contain" />
+      <BrandMascot slot="mascot_home" alt="نيلو المساعد" size={64} className="w-16 h-16 animate-bob object-contain" />
       <div className="flex-1">
-        <div className="text-sm font-extrabold">أهلاً {profile?.display_name ?? ""}! أنا زكي 🤖</div>
+        <div className="text-sm font-extrabold">أهلاً {profile?.display_name ?? ""}! أنا نيلو 🤖</div>
         <div className="text-xs text-muted-foreground">أكمل درسك اليومي واحصل على +5 جواهر.</div>
       </div>
     </div>

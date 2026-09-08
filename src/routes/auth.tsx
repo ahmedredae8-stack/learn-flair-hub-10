@@ -73,7 +73,7 @@ function LandingPage() {
               <br /> بطريقة ممتعة… 5 دقائق يومياً
             </h1>
             <p className="mt-4 text-sm sm:text-base font-bold text-muted-foreground leading-relaxed">
-              دروس قصيرة على شكل محادثة مع زكي ونور وآدم، تجارب حيّة داخل شاشة مساعد ذكي، أسئلة، نقاط، وشارات — وفي النهاية تبني مشروعك الخاص.
+              دروس قصيرة على شكل محادثة مع نيلو ونور وآدم، تجارب حيّة داخل شاشة مساعد ذكي، أسئلة، نقاط، وشارات — وفي النهاية تبني مشروعك الخاص.
             </p>
             <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
               <button onClick={() => goForm("signup")} className="btn-3d active:btn-3d-active">ابدأ الآن مجاناً</button>
@@ -96,7 +96,7 @@ function LandingPage() {
                 <div className="flex items-start gap-2">
                   <BrandMascot slot="mascot_landing" size={36} className="w-9 h-9 animate-bob object-contain" />
                   <div className="rounded-2xl rounded-tr-sm bg-card border-2 border-border px-3 py-2 text-[12px] font-bold leading-6">
-                    أهلاً! أنا زكي 🤖 في 5 دقائق النهاردة هتتعلّم تكتب أمراً ذكياً يطلّع نتيجة احترافية.
+                    أهلاً! أنا نيلو 🤖 في 5 دقائق النهاردة هتتعلّم تكتب أمراً ذكياً يطلّع نتيجة احترافية.
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
@@ -144,7 +144,7 @@ function LandingPage() {
           <p className="mt-2 text-center text-sm font-bold text-muted-foreground">لقطات حقيقية من nilex — مش صور تسويقية.</p>
           <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             <Shot src={shotHome} title="مسار التعلّم" text="طريق الدروس المتعرّج مع تقدّمك ونقاطك." />
-            <Shot src={shotLesson} title="الدرس محادثة" text="رسائل من زكي ونور وأ. سارة تظهر واحدة واحدة." />
+            <Shot src={shotLesson} title="الدرس محادثة" text="رسائل من نيلو ونور وأ. سارة تظهر واحدة واحدة." />
             <Shot src={shotCourses} title="الكورسات" text="مجاني للجميع + كورسات مميّزة للتصميم والبرمجة." />
             <Shot src={shotProjects} title="المشاريع والتمويل" text="قدّم فكرتك، اطلب تمويلاً، وناقش المجتمع في المنتدى." />
           </div>
@@ -158,7 +158,7 @@ function LandingPage() {
           <ol className="mt-8 space-y-3">
             {[
               "اعمل حساب واختر صورتك (ولد، بنت، روبوت أو صورتك الخاصة).",
-              "افتح أول درس في المسار وابدأ المحادثة مع زكي.",
+              "افتح أول درس في المسار وابدأ المحادثة مع نيلو.",
               "جرّب الأداة بنفسك داخل الشاشة التفاعلية وجاوب على الأسئلة.",
               "اجمع النقاط، افتح الدرس التالي، وابنِ مشروعك في النهاية.",
             ].map((t, i) => (

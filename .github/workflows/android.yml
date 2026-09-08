@@ -1,0 +1,94 @@
+name: Build Android (unsigned APK + AAB)
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Install Capacitor
+        run: bun add @capacitor/core @capacitor/cli @capacitor/android
+
+      - name: Install Capacitor Assets generator
+        run: bun add -D @capacitor/assets || true
+
+      - name: Build web assets
+        run: bun run build
+
+      - name: Ensure webDir exists
+        run: mkdir -p dist && [ -f dist/index.html ] || echo '<!doctype html><meta http-equiv="refresh" content="0;url=https://generative-course-pro.lovable.app">' > dist/index.html
+
+      - name: Add Android platform
+        run: bunx cap add android
+
+      - name: Sync Capacitor
+        run: bunx cap sync android
+
+      - name: Force update package name and SDK 36 properly
+        run: |
+          # تحديث اسم الحزمة
+          sed -i 's/applicationId ".*"/applicationId "app.lovable.nilex"/g' android/app/build.gradle
+
+          # تحديث إعدادات الإصدارات في ملف الجذر (project build.gradle) إذا كانت موجودة
+          if [ -f "android/build.gradle" ]; then
+            sed -i 's/compileSdkVersion = .*/compileSdkVersion = 36/g' android/build.gradle || true
+            sed -i 's/targetSdkVersion = .*/targetSdkVersion = 36/g' android/build.gradle || true
+            sed -i 's/minSdkVersion = .*/minSdkVersion = 24/g' android/build.gradle || true
+          fi
+
+          # تحديث المتغيرات بملف الـ app build.gradle بطريقة سليمة ومحددة بدقة
+          sed -i 's/compileSdk.*/compileSdk 36/g' android/app/build.gradle || true
+          sed -i 's/targetSdk.*/targetSdk 36/g' android/app/build.gradle || true
+          sed -i 's/compileSdkVersion.*/compileSdkVersion 36/g' android/app/build.gradle || true
+          sed -i 's/targetSdkVersion.*/targetSdkVersion 36/g' android/app/build.gradle || true
+
+      - name: Set App Icon and Bump Version Code
+        run: |
+          # توليد وضبط الأيقونة المخصصة من مسار apple-touch-icon.png تلقائياً
+          if [ -f "public/apple-touch-icon.png" ]; then
+            mkdir -p assets
+            cp public/apple-touch-icon.png assets/icon.png
+            npx capacitor-assets generate --android || true
+          fi
+
+          # رفع رقم الإصدار (versionCode) و(versionName) تلقائياً لتجاوز قيود متجر بلاي للنسخ
+          BUILD_NUM=${{ github.run_number }}
+          sed -i "s/versionCode [0-9]*/versionCode $((BUILD_NUM + 1000))/g" android/app/build.gradle || true
+          sed -i 's/versionName ".*"/versionName "1.0.${{ github.run_number }}"/g' android/app/build.gradle || true
+
+      - name: Build unsigned APK
+        working-directory: android
+        run: ./gradlew assembleRelease
+
+      - name: Build unsigned AAB
+        working-directory: android
+        run: ./gradlew bundleRelease
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: nilex-android-unsigned
+          path: |
+            android/app/build/outputs/apk/release/*.apk
+            android/app/build/outputs/bundle/release/*.aab
+          if-no-files-found: error

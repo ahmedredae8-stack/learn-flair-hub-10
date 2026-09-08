@@ -49,6 +49,62 @@ export type Database = {
           },
         ]
       }
+      ai_jobs: {
+        Row: {
+          article: string
+          attempts: number
+          brief: string
+          character_ids: string[]
+          created_at: string
+          error: string | null
+          id: string
+          lesson_id: string
+          mode: string
+          msg_count: number
+          priority: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          article?: string
+          attempts?: number
+          brief?: string
+          character_ids?: string[]
+          created_at?: string
+          error?: string | null
+          id?: string
+          lesson_id: string
+          mode?: string
+          msg_count?: number
+          priority?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          article?: string
+          attempts?: number
+          brief?: string
+          character_ids?: string[]
+          created_at?: string
+          error?: string | null
+          id?: string
+          lesson_id?: string
+          mode?: string
+          msg_count?: number
+          priority?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_jobs_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       characters: {
         Row: {
           avatar_url: string | null
@@ -277,6 +333,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      job_secrets: {
+        Row: {
+          created_at: string
+          name: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          name: string
+          token: string
+        }
+        Update: {
+          created_at?: string
+          name?: string
+          token?: string
+        }
+        Relationships: []
       }
       lesson_progress: {
         Row: {
@@ -710,6 +784,36 @@ export type Database = {
         }
         Relationships: []
       }
+      public_profiles: {
+        Row: {
+          avatar_url: string | null
+          display_name: string | null
+          id: string
+          streak: number
+          updated_at: string
+          username: string | null
+          xp: number
+        }
+        Insert: {
+          avatar_url?: string | null
+          display_name?: string | null
+          id: string
+          streak?: number
+          updated_at?: string
+          username?: string | null
+          xp?: number
+        }
+        Update: {
+          avatar_url?: string | null
+          display_name?: string | null
+          id?: string
+          streak?: number
+          updated_at?: string
+          username?: string | null
+          xp?: number
+        }
+        Relationships: []
+      }
       site_settings: {
         Row: {
           key: string
@@ -788,7 +892,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
+          role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
@@ -804,13 +908,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
       account_status: "active" | "suspended" | "banned"
@@ -818,7 +916,7 @@ export type Database = {
       lesson_status: "draft" | "published" | "archived"
       project_channel: "team" | "parents" | "admin"
       project_stage: "idea" | "review" | "funding" | "funded" | "rejected"
-      step_kind: "text" | "image" | "video" | "question"
+      step_kind: "text" | "image" | "video" | "question" | "simulation"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -951,7 +1049,7 @@ export const Constants = {
       lesson_status: ["draft", "published", "archived"],
       project_channel: ["team", "parents", "admin"],
       project_stage: ["idea", "review", "funding", "funded", "rejected"],
-      step_kind: ["text", "image", "video", "question"],
+      step_kind: ["text", "image", "video", "question", "simulation"],
     },
   },
 } as const
