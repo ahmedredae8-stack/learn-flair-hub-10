@@ -2,7 +2,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { uploadFile } from "@/lib/upload";
 import { SETTING_LABELS, useSaveSetting, useSiteSettings, type SettingKey } from "@/lib/siteSettings";
-import { Loader2, RotateCcw, Upload } from "lucide-react";
+import { Loader2, Palette, RotateCcw, Upload } from "lucide-react";
+import { DEFAULT_PRESET, THEME_PRESETS } from "@/lib/theme";
 
 async function uploadBranding(key: string, file: File): Promise<string> {
   const up = await uploadFile("branding", file, `${key}-`);
@@ -44,6 +45,7 @@ export function BrandingPanel() {
 
   return (
     <div className="space-y-3">
+      <ThemePanel />
       <p className="text-xs font-bold text-muted-foreground">
         غيّر اللوجو وصور الروبوت في أي وقت — التغيير يظهر فوراً لكل المستخدمين.
       </p>
@@ -87,6 +89,80 @@ function Row({ k, label, hint, value, busy, onPick, onUrl }: {
             </button>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** Palette control — stored in the database so it applies to every visitor. */
+function ThemePanel() {
+  const { data: settings } = useSiteSettings();
+  const save = useSaveSetting();
+  const [busy, setBusy] = useState(false);
+  const [custom, setCustom] = useState(settings?.theme_primary ?? "");
+  const current = settings?.theme_preset ?? DEFAULT_PRESET;
+
+  async function pick(id: string) {
+    setBusy(true);
+    try {
+      await save("theme_preset", id);
+      await save("theme_primary", null);
+      setCustom("");
+      toast.success("تم تغيير لون المنصة");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "فشل الحفظ");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="bg-card border-2 border-border rounded-2xl p-3 space-y-3">
+      <div className="font-extrabold text-sm flex items-center gap-1">
+        <Palette className="w-4 h-4 text-primary" /> لون المنصة
+      </div>
+      <p className="text-[11px] font-bold text-muted-foreground leading-5">
+        اختر الهوية اللونية — تُطبَّق فوراً على كل الصفحات ولكل المستخدمين.
+      </p>
+      <div className="grid grid-cols-4 gap-2">
+        {THEME_PRESETS.map((p) => (
+          <button
+            key={p.id}
+            disabled={busy}
+            onClick={() => pick(p.id)}
+            className={`rounded-xl border-2 p-2 flex flex-col items-center gap-1 font-extrabold text-[11px] transition ${
+              current === p.id ? "border-primary bg-primary/10" : "border-border"
+            }`}
+          >
+            <span className="w-7 h-7 rounded-full" style={{ background: p.swatch }} />
+            {p.label}
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          dir="ltr"
+          value={custom}
+          onChange={(e) => setCustom(e.target.value)}
+          placeholder="#7c3aed لون مخصّص"
+          className="flex-1 px-3 py-1.5 rounded-xl border-2 border-input bg-background font-bold text-[11px]"
+        />
+        <button
+          onClick={async () => {
+            setBusy(true);
+            try {
+              await save("theme_primary", custom.trim() || null);
+              toast.success("تم الحفظ");
+            } catch (e) {
+              toast.error(e instanceof Error ? e.message : "فشل الحفظ");
+            } finally {
+              setBusy(false);
+            }
+          }}
+          className="text-xs font-extrabold text-primary"
+        >
+          حفظ
+        </button>
       </div>
     </div>
   );

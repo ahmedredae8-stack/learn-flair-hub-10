@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   AI_LESSON_SYSTEM,
+  AI_PHYSICS_RULES,
   AI_UNIT_SYSTEM,
   AiLessonInput,
   AiUnitInput,
@@ -69,11 +70,17 @@ export const generateLessonSteps = createServerFn({ method: "POST" })
     const ctxText = ctx
       ? `\n\nسياق الدرس:\n- الكورس: ${ctx.courseTitle ?? "-"}\n- الوحدة ${ctx.unitNumber ?? "-"}: ${ctx.unitName ?? "-"}\n- الدرس ${ctx.lessonNumber ?? "-"}: ${ctx.lessonTitle ?? "-"}\n- الدرس السابق: ${ctx.previousLesson ?? "لا يوجد"}\n- الدرس القادم: ${ctx.nextLesson ?? "لا يوجد"}`
       : "";
+    const bios = data.characterBios.length
+      ? `\n\nأوصاف الشخصيات:\n${data.characterBios.map((c) => `- ${c.name}: ${c.bio || "بدون وصف"}`).join("\n")}`
+      : "";
+    const article = data.article.trim()
+      ? `\n\nالمقال المصدر (التزم بمعلوماته):\n${data.article.trim()}`
+      : "";
     const meta = data.withMeta ? "\n\nأعد أيضاً objectives و summary_points لهذا الدرس." : "";
 
     const parsed = await callGateway(
-      AI_LESSON_SYSTEM,
-      `الشخصيات المتاحة: ${data.characters.join("، ") || "بدون"}${wanted}${ctxText}${meta}\n\nالشرح:\n${data.explanation}`,
+      data.mode === "physics" ? `${AI_LESSON_SYSTEM}\n\n${AI_PHYSICS_RULES}` : AI_LESSON_SYSTEM,
+      `الشخصيات المتاحة: ${data.characters.join("، ") || "بدون"}${bios}${wanted}${ctxText}${meta}${article}\n\nالشرح:\n${data.explanation}`,
     );
 
     const steps = ((parsed["steps"] as AiStep[] | undefined) ?? []).filter(
@@ -97,8 +104,8 @@ export const generateUnitPlan = createServerFn({ method: "POST" })
     await assertAdmin(context as never);
 
     const parsed = await callGateway(
-      AI_UNIT_SYSTEM,
-      `الكورس: ${data.courseTitle}\nالوحدة ${data.unitNumber}: ${data.unitName}\nعدد الدروس المطلوب: ${data.lessonCount}\n\nمعلومات وأهداف يبني عليها المنهج:\n${data.brief}`,
+      data.mode === "physics" ? `${AI_UNIT_SYSTEM}\n\n${AI_PHYSICS_RULES}` : AI_UNIT_SYSTEM,
+      `الكورس: ${data.courseTitle}\nالوحدة ${data.unitNumber}: ${data.unitName}\nعدد الدروس المطلوب: ${data.lessonCount}\n\nمعلومات وأهداف يبني عليها المنهج:\n${data.brief}${data.article.trim() ? `\n\nالمقال المصدر الكامل (وزّع محتواه على الدروس بترتيب مترابط):\n${data.article.trim()}` : ""}`,
     );
 
     const lessons = ((parsed["lessons"] as AiUnitLesson[] | undefined) ?? []).filter(

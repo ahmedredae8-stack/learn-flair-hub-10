@@ -13,7 +13,9 @@ export type SettingKey =
   | "mascot_home"
   | "mascot_courses"
   | "mascot_landing"
-  | "mascot_lesson";
+  | "mascot_lesson"
+  | "theme_preset"
+  | "theme_primary";
 
 export const SETTING_LABELS: { key: SettingKey; label: string; hint: string }[] = [
   { key: "logo", label: "اللوجو (كل المنصة)", hint: "يظهر بجانب الإشعارات، وفي أعلى وأسفل صفحة الهبوط." },

@@ -11,12 +11,13 @@ import { LessonEditor, MOODS } from "@/components/admin/LessonEditor";
 import { CoursesPanel } from "@/components/admin/CoursesPanel";
 import { BrandingPanel } from "@/components/admin/BrandingPanel";
 import { UnitBuilder } from "@/components/admin/UnitBuilder";
+import { ContentFactory } from "@/components/admin/ContentFactory";
 import { MASCOT_MOODS } from "@/lib/mascotMoods";
 import { uploadFile } from "@/lib/upload";
 import { toast } from "sonner";
 import {
   Loader2, Users, GraduationCap, Rocket, MessageCircle, Trash2, Plus, ShieldCheck, Save,
-  Ban, Pencil, Bell, Upload, ShieldOff, CheckCircle2, BookOpen, Image as ImageIcon,
+  Ban, Pencil, Bell, Upload, ShieldOff, CheckCircle2, BookOpen, Image as ImageIcon, Factory,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -37,7 +38,7 @@ export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPage,
 });
 
-type Tab = "students" | "courses" | "lessons" | "characters" | "projects" | "notify" | "branding";
+type Tab = "students" | "courses" | "lessons" | "characters" | "projects" | "notify" | "branding" | "factory";
 
 function AdminPage() {
   const { data: isAdmin, isLoading } = useIsAdmin();
@@ -69,7 +70,7 @@ function AdminPage() {
           <h1 className="text-2xl font-extrabold">لوحة الأدمن</h1>
         </div>
 
-        <div className="grid grid-cols-4 sm:grid-cols-7 gap-1 bg-secondary p-1 rounded-2xl mb-5 text-[10px] sm:text-sm">
+        <div className="grid grid-cols-4 sm:grid-cols-8 gap-1 bg-secondary p-1 rounded-2xl mb-5 text-[10px] sm:text-sm">
           <TabBtn active={tab === "students"} onClick={() => setTab("students")} icon={<Users className="w-4 h-4" />} label="الطلاب" />
           <TabBtn active={tab === "courses"} onClick={() => setTab("courses")} icon={<BookOpen className="w-4 h-4" />} label="الكورسات" />
           <TabBtn active={tab === "lessons"} onClick={() => setTab("lessons")} icon={<GraduationCap className="w-4 h-4" />} label="الدروس" />
@@ -77,6 +78,7 @@ function AdminPage() {
           <TabBtn active={tab === "projects"} onClick={() => setTab("projects")} icon={<Rocket className="w-4 h-4" />} label="المشاريع" />
           <TabBtn active={tab === "notify"} onClick={() => setTab("notify")} icon={<Bell className="w-4 h-4" />} label="إشعارات" />
           <TabBtn active={tab === "branding"} onClick={() => setTab("branding")} icon={<ImageIcon className="w-4 h-4" />} label="المظهر" />
+          <TabBtn active={tab === "factory"} onClick={() => setTab("factory")} icon={<Factory className="w-4 h-4" />} label="المصنع" />
         </div>
 
         {tab === "students" && <StudentsPanel />}
@@ -86,6 +88,7 @@ function AdminPage() {
         {tab === "projects" && <ProjectsPanel />}
         {tab === "notify" && <NotifyPanel />}
         {tab === "branding" && <BrandingPanel />}
+        {tab === "factory" && <ContentFactory />}
       </main>
       <BottomNav />
       {lesson && <LessonEditor lessonId={lesson} onClose={() => navigate({ to: "/admin", search: {} })} />}
@@ -388,6 +391,14 @@ function LessonsPanel() {
             <button onClick={() => navigate({ to: "/admin", search: { lesson: l.id } })} className="p-2 rounded-lg text-primary hover:bg-primary/10" aria-label="تحرير">
               <Pencil className="w-4 h-4" />
             </button>
+            {l.status !== "published" && (
+              <button
+                onClick={() => updateStatus(l.id, "published")}
+                className="text-[11px] px-2 py-1 rounded-lg bg-emerald-500 text-white font-extrabold"
+              >
+                نشر
+              </button>
+            )}
             <select value={l.status} onChange={(e) => updateStatus(l.id, e.target.value as "draft" | "published" | "archived")} className="text-xs px-2 py-1 rounded-lg border-2 border-input bg-background font-extrabold">
               <option value="draft">مسودة</option>
               <option value="published">منشور</option>

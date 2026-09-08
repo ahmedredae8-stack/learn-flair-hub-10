@@ -18,6 +18,8 @@ import { Route as AuthenticatedLeaderboardRouteImport } from './routes/_authenti
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedProjectsRouteImport } from './routes/_authenticated/projects'
 import { Route as AuthenticatedLessonLessonIdRouteImport } from './routes/_authenticated/lesson.$lessonId'
+import { Route as ApiPublicAiJobsTickRouteImport } from './routes/api/public/ai-jobs-tick'
+import { Route as ApiPublicContentApiRouteImport } from './routes/api/public/content-api'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -65,6 +67,16 @@ const AuthenticatedLessonLessonIdRoute =
     path: '/lesson/$lessonId',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const ApiPublicAiJobsTickRoute = ApiPublicAiJobsTickRouteImport.update({
+  id: '/api/public/ai-jobs-tick',
+  path: '/api/public/ai-jobs-tick',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicContentApiRoute = ApiPublicContentApiRouteImport.update({
+  id: '/api/public/content-api',
+  path: '/api/public/content-api',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -75,6 +87,8 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AuthenticatedProfileRoute
   '/projects': typeof AuthenticatedProjectsRoute
   '/lesson/$lessonId': typeof AuthenticatedLessonLessonIdRoute
+  '/api/public/ai-jobs-tick': typeof ApiPublicAiJobsTickRoute
+  '/api/public/content-api': typeof ApiPublicContentApiRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
@@ -85,6 +99,8 @@ export interface FileRoutesByTo {
   '/projects': typeof AuthenticatedProjectsRoute
   '/': typeof AuthenticatedIndexRoute
   '/lesson/$lessonId': typeof AuthenticatedLessonLessonIdRoute
+  '/api/public/ai-jobs-tick': typeof ApiPublicAiJobsTickRoute
+  '/api/public/content-api': typeof ApiPublicContentApiRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -97,6 +113,8 @@ export interface FileRoutesById {
   '/_authenticated/projects': typeof AuthenticatedProjectsRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/lesson/$lessonId': typeof AuthenticatedLessonLessonIdRoute
+  '/api/public/ai-jobs-tick': typeof ApiPublicAiJobsTickRoute
+  '/api/public/content-api': typeof ApiPublicContentApiRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -109,6 +127,8 @@ export interface FileRouteTypes {
     | '/profile'
     | '/projects'
     | '/lesson/$lessonId'
+    | '/api/public/ai-jobs-tick'
+    | '/api/public/content-api'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
@@ -119,6 +139,8 @@ export interface FileRouteTypes {
     | '/projects'
     | '/'
     | '/lesson/$lessonId'
+    | '/api/public/ai-jobs-tick'
+    | '/api/public/content-api'
   id:
     | '__root__'
     | '/_authenticated'
@@ -130,11 +152,15 @@ export interface FileRouteTypes {
     | '/_authenticated/projects'
     | '/_authenticated/'
     | '/_authenticated/lesson/$lessonId'
+    | '/api/public/ai-jobs-tick'
+    | '/api/public/content-api'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ApiPublicAiJobsTickRoute: typeof ApiPublicAiJobsTickRoute
+  ApiPublicContentApiRoute: typeof ApiPublicContentApiRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -202,6 +228,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLessonLessonIdRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/api/public/ai-jobs-tick': {
+      id: '/api/public/ai-jobs-tick'
+      path: '/api/public/ai-jobs-tick'
+      fullPath: '/api/public/ai-jobs-tick'
+      preLoaderRoute: typeof ApiPublicAiJobsTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/content-api': {
+      id: '/api/public/content-api'
+      path: '/api/public/content-api'
+      fullPath: '/api/public/content-api'
+      preLoaderRoute: typeof ApiPublicContentApiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -231,6 +271,8 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ApiPublicAiJobsTickRoute: ApiPublicAiJobsTickRoute,
+  ApiPublicContentApiRoute: ApiPublicContentApiRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

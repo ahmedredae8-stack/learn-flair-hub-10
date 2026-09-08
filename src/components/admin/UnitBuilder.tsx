@@ -24,6 +24,8 @@ export function UnitBuilder() {
   const [unitNumber, setUnitNumber] = useState(1);
   const [unitName, setUnitName] = useState("");
   const [brief, setBrief] = useState("");
+  const [article, setArticle] = useState("");
+  const [picked, setPicked] = useState<string[]>([]);
   const [lessonCount, setLessonCount] = useState(10);
   const [msgCount, setMsgCount] = useState(18);
   const [busy, setBusy] = useState(false);
@@ -41,7 +43,7 @@ export function UnitBuilder() {
   const charsQ = useQuery({
     queryKey: ["admin-characters"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("characters").select("id,name").order("name");
+      const { data, error } = await supabase.from("characters").select("id,name,bio").order("name");
       if (error) throw error;
       return data ?? [];
     },
@@ -50,9 +52,10 @@ export function UnitBuilder() {
   const course = (coursesQ.data ?? []).find((c) => c.id === courseId);
   const isAiCourse = (course?.title ?? "").includes("الذكاء");
   // The AI-tools course has its own cast: only أ. سارة teaches, and رضا/احمد never appear.
-  const cast = (charsQ.data ?? []).filter((c) =>
-    isAiCourse ? !/رضا|احمد/.test(c.name) : true,
-  );
+  const isPhysics = /فيزيا/.test(course?.title ?? "");
+  const available = (charsQ.data ?? []).filter((c) => (isAiCourse ? !/رضا|احمد/.test(c.name) : true));
+  // The admin picks the cast explicitly; if nothing is picked we use everyone available.
+  const cast = picked.length ? available.filter((c) => picked.includes(c.id)) : available;
 
   async function run() {
     if (!courseId) return toast.error("اختر الكورس");
@@ -70,6 +73,8 @@ export function UnitBuilder() {
           unitNumber,
           unitName: unitName.trim(),
           brief: brief.trim(),
+          article: article.trim(),
+          mode: isPhysics ? "physics" : "chat",
           lessonCount,
         },
       });
@@ -99,6 +104,9 @@ export function UnitBuilder() {
           data: {
             explanation: `${l.description}\n\nالأهداف:\n${(l.objectives ?? []).join("\n")}\n\nمعلومات الوحدة:\n${brief.trim()}`,
             characters: cast.map((c) => c.name),
+            characterBios: cast.map((c) => ({ name: c.name, bio: (c as { bio?: string | null }).bio ?? "" })),
+            article: article.trim(),
+            mode: isPhysics ? "physics" : "chat",
             count: msgCount,
             context: {
               courseTitle: course?.title,
@@ -116,18 +124,21 @@ export function UnitBuilder() {
           const char = cast.find((c) => c.name.trim() === (s.character ?? "").trim());
           const isQ = s.kind === "question" && Array.isArray(s.choices) && s.choices.length >= 2;
           const isImg = s.kind === "image";
+          const isSim = s.kind === "simulation" && !!s.sim && Array.isArray(s.sim.vars) && s.sim.vars.length > 0;
           return {
             lesson_id: (created as { id: string }).id,
             order_index: idx + 1,
-            kind: isQ ? "question" : isImg ? "image" : "text",
+            kind: isSim ? "simulation" : isQ ? "question" : isImg ? "image" : "text",
             content: s.content,
             media_url: isImg ? DEFAULT_IMAGE : null,
             admin_note: s.admin_note?.trim() || null,
             character_id: char?.id ?? null,
             mood: MOODS.some((m) => m.id === s.mood) ? s.mood : "neutral",
-            options: isQ
-              ? { choices: s.choices, answer: Math.max(0, Math.min((s.choices?.length ?? 1) - 1, s.answer ?? 0)) }
-              : null,
+            options: isSim
+              ? { sim: s.sim }
+              : isQ
+                ? { choices: s.choices, answer: Math.max(0, Math.min((s.choices?.length ?? 1) - 1, s.answer ?? 0)) }
+                : null,
           };
         });
         const { error: stepErr } = await supabase.from("lesson_steps").insert(rows as never);
@@ -166,12 +177,52 @@ export function UnitBuilder() {
         <input value={unitName} onChange={(e) => setUnitName(e.target.value)} placeholder="اسم الوحدة" className={inp} />
       </div>
       <textarea
-        rows={4}
+        rows={3}
         value={brief}
         onChange={(e) => setBrief(e.target.value)}
         placeholder="أهداف الوحدة، الأدوات، الأفكار، المهارات التي يخرج بها الطالب…"
         className={`${inp} resize-none`}
       />
+      <textarea
+        rows={7}
+        value={article}
+        onChange={(e) => setArticle(e.target.value)}
+        placeholder="المقال الكامل: اكتب هنا كل المعلومات والدروس التي تريد أن يبني عليها الذكاء الاصطناعي الوحدة (يلتزم بها حرفياً)"
+        className={`${inp} resize-none`}
+      />
+
+      <div className="rounded-2xl border-2 border-input bg-background p-2">
+        <div className="text-[10px] font-extrabold text-muted-foreground mb-1">
+          شخصيات الوحدة {picked.length === 0 && "(الكل)"}
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {available.map((c) => {
+            const on = picked.includes(c.id);
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setPicked((p) => (on ? p.filter((x) => x !== c.id) : [...p, c.id]))}
+                className={`px-2.5 py-1 rounded-xl text-[11px] font-extrabold border-2 ${on ? "border-primary bg-primary/10 text-primary" : "border-input text-muted-foreground"}`}
+              >
+                {c.name}
+              </button>
+            );
+          })}
+        </div>
+        {picked.length > 0 && (
+          <p className="mt-1 text-[9px] font-bold text-muted-foreground leading-4">
+            سيلتزم الذكاء الاصطناعي بوصف كل شخصية من صفحة الشخصيات.
+          </p>
+        )}
+      </div>
+
+      {isPhysics && (
+        <div className="rounded-2xl bg-primary/10 border-2 border-primary/30 p-2 text-[10px] font-extrabold text-primary leading-5">
+          وضع التجارب الفيزيائية مفعّل: سيبني الذكاء الاصطناعي محاكاة تفاعلية يتحكم فيها الطالب بالأرقام حسب القانون.
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         <label className="flex items-center gap-2">
           <span className="text-[10px] font-extrabold text-muted-foreground shrink-0">عدد الدروس</span>

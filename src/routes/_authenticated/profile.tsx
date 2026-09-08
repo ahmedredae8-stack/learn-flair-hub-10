@@ -89,6 +89,19 @@ function ProfilePage() {
     navigate({ to: "/auth", replace: true });
   }
 
+  // No profile after loading means the session is gone — send the user to sign in
+  // instead of spinning forever.
+  if (!isLoading && !profile) {
+    return (
+      <div dir="rtl" className="min-h-screen grid place-items-center bg-background gap-3 p-6 text-center">
+        <p className="font-extrabold text-sm text-muted-foreground">انتهت الجلسة، سجّل الدخول من جديد</p>
+        <button onClick={() => navigate({ to: "/auth", replace: true })} className="btn-3d active:btn-3d-active">
+          تسجيل الدخول
+        </button>
+      </div>
+    );
+  }
+
   if (isLoading || !profile) {
     return (
       <div className="min-h-screen grid place-items-center bg-background">
